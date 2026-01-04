@@ -1,0 +1,26 @@
+# Source files
+src/
+test/
+tsconfig.json
+
+# Config files
+.gitignore
+.eslintrc*
+.prettierrc*
+.editorconfig
+
+# Documentation (keep README)
+CONTRIBUTING.md
+CODE_OF_CONDUCT.md
+
+# IDE
+.idea/
+.vscode/
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Development files
+*.log
+.env*
