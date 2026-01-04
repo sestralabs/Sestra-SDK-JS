@@ -17,7 +17,8 @@ import { SestraClient } from '@sestra/sdk';
 
 // Initialize client in sandbox mode
 const client = new SestraClient({
-  baseUrl: 'https://api.sestralabs.xyz',
+  sestraBaseUrl: 'https://api.sestralabs.xyz',
+  serviceBaseUrl: 'https://api.your-service.com', // Your protected API
   sandbox: true, // Enable sandbox mode
 });
 
@@ -50,7 +51,8 @@ import { PublicKey } from '@solana/web3.js';
 
 // Initialize client in production mode
 const client = new SestraClient({
-  baseUrl: 'https://api.sestralabs.xyz',
+  sestraBaseUrl: 'https://api.sestralabs.xyz',
+  serviceBaseUrl: 'https://api.your-service.com', // Your protected API
   sandbox: false,
 });
 
@@ -95,10 +97,24 @@ async function payAndAccess() {
 
 ```typescript
 const client = new SestraClient({
-  baseUrl: 'https://api.sestralabs.xyz', // API base URL
-  sandbox: false, // Enable sandbox mode for testing
+  // Sestra API URL for payments and session issuance
+  sestraBaseUrl: 'https://api.sestralabs.xyz',
+  
+  // Provider's protected API URL (your service)
+  serviceBaseUrl: 'https://api.your-service.com',
+  
+  // Enable sandbox mode for testing
+  sandbox: false,
 });
 ```
+
+#### Configuration Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `sestraBaseUrl` | Sestra API URL for payments/sessions | `https://api.sestralabs.xyz` |
+| `serviceBaseUrl` | Provider's protected API URL | Same as `sestraBaseUrl` |
+| `sandbox` | Enable sandbox mode for testing | `false` |
 
 #### Payment Methods
 
@@ -170,7 +186,10 @@ const confirmed = await wallet.waitForConfirmation(txHash);
 ```typescript
 import { SestraClient, SestraWallet } from '@sestra/sdk';
 
-const client = new SestraClient({ baseUrl: 'https://api.sestralabs.xyz' });
+const client = new SestraClient({
+  sestraBaseUrl: 'https://api.sestralabs.xyz',
+  serviceBaseUrl: 'https://api.your-service.com',
+});
 const wallet = new SestraWallet();
 
 // Get payment details

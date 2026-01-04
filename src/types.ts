@@ -3,7 +3,23 @@
 // ============================================
 
 export interface SestraConfig {
-  baseUrl: string;
+  /**
+   * Sestra API URL for payments and session issuance
+   * @default 'https://api.sestralabs.xyz'
+   */
+  sestraBaseUrl?: string;
+  
+  /**
+   * Provider's protected API URL (your service)
+   * Required for making authenticated requests to protected endpoints
+   */
+  serviceBaseUrl?: string;
+  
+  /**
+   * @deprecated Use sestraBaseUrl instead
+   */
+  baseUrl?: string;
+  
   solanaRpcEndpoint?: string;
   sandbox?: boolean;
 }

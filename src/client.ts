@@ -16,18 +16,20 @@ import type {
   ApiResponse,
 } from './types.js';
 
-const DEFAULT_CONFIG: Partial<SestraConfig> = {
-  baseUrl: 'https://api.sestralabs.xyz',
-  sandbox: false,
-};
+const DEFAULT_SESTRA_URL = 'https://api.sestralabs.xyz';
 
 export class SestraClient {
-  private config: SestraConfig;
+  private sestraBaseUrl: string;
+  private serviceBaseUrl?: string;
+  private sandbox: boolean;
   private sessionToken?: string;
   private currentSession?: Session;
 
   constructor(config: Partial<SestraConfig> = {}) {
-    this.config = { ...DEFAULT_CONFIG, ...config } as SestraConfig;
+    // Support both old baseUrl and new sestraBaseUrl
+    this.sestraBaseUrl = config.sestraBaseUrl || config.baseUrl || DEFAULT_SESTRA_URL;
+    this.serviceBaseUrl = config.serviceBaseUrl;
+    this.sandbox = config.sandbox ?? false;
   }
 
   // ============================================
@@ -75,11 +77,11 @@ export class SestraClient {
    * Returns payment details including Solana address, amount, and memo
    */
   async createPayment(params: CreatePaymentRequest): Promise<CreatePaymentResponse> {
-    const endpoint = this.config.sandbox 
+    const endpoint = this.sandbox 
       ? '/api/v1/sandbox/payments' 
       : '/api/v1/payments';
 
-    const response = await this.fetch<CreatePaymentResponse>(endpoint, {
+    const response = await this.fetchSestra<CreatePaymentResponse>(endpoint, {
       method: 'POST',
       body: JSON.stringify(params),
     });
@@ -95,11 +97,11 @@ export class SestraClient {
    * Check payment status by reference ID
    */
   async getPaymentStatus(referenceId: string): Promise<PaymentStatusResponse> {
-    const endpoint = this.config.sandbox
+    const endpoint = this.sandbox
       ? `/api/v1/sandbox/payments/${referenceId}`
       : `/api/v1/payments/${referenceId}`;
 
-    const response = await this.fetch<PaymentStatusResponse>(endpoint);
+    const response = await this.fetchSestra<PaymentStatusResponse>(endpoint);
 
     if (!response.data) {
       throw new Error(response.error || 'Payment not found');
@@ -113,11 +115,11 @@ export class SestraClient {
    * Returns session token for API access
    */
   async verifyPayment(referenceId: string, txHash: string): Promise<VerifyPaymentResponse> {
-    if (this.config.sandbox) {
+    if (this.sandbox) {
       throw new Error('Use simulatePayment() for sandbox mode');
     }
 
-    const response = await this.fetch<VerifyPaymentResponse>(
+    const response = await this.fetchSestra<VerifyPaymentResponse>(
       `/api/v1/payments/${referenceId}/verify`,
       {
         method: 'POST',
@@ -144,11 +146,11 @@ export class SestraClient {
    * Cancel a pending payment
    */
   async cancelPayment(referenceId: string): Promise<CancelPaymentResponse> {
-    const endpoint = this.config.sandbox
+    const endpoint = this.sandbox
       ? `/api/v1/sandbox/payments/${referenceId}/cancel`
       : `/api/v1/payments/${referenceId}/cancel`;
 
-    const response = await this.fetch<CancelPaymentResponse>(endpoint, {
+    const response = await this.fetchSestra<CancelPaymentResponse>(endpoint, {
       method: 'POST',
     });
 
@@ -168,11 +170,11 @@ export class SestraClient {
     if (options.limit) params.set('limit', options.limit.toString());
     if (options.offset) params.set('offset', options.offset.toString());
 
-    const endpoint = this.config.sandbox
+    const endpoint = this.sandbox
       ? `/api/v1/sandbox/payments?${params}`
       : `/api/v1/payments?${params}`;
 
-    const response = await this.fetch<PaymentStatusResponse[]>(endpoint);
+    const response = await this.fetchSestra<PaymentStatusResponse[]>(endpoint);
 
     return response.data || [];
   }
@@ -189,11 +191,11 @@ export class SestraClient {
     referenceId: string, 
     options: SimulatePaymentRequest = { success: true }
   ): Promise<SimulatePaymentResponse> {
-    if (!this.config.sandbox) {
+    if (!this.sandbox) {
       throw new Error('simulatePayment() only works in sandbox mode. Set sandbox: true in config.');
     }
 
-    const response = await this.fetch<SimulatePaymentResponse>(
+    const response = await this.fetchSestra<SimulatePaymentResponse>(
       `/api/v1/sandbox/payments/${referenceId}/simulate`,
       {
         method: 'POST',
@@ -223,7 +225,8 @@ export class SestraClient {
   // ============================================
 
   /**
-   * Make authenticated request to protected endpoint
+   * Make authenticated request to provider's protected endpoint
+   * Uses serviceBaseUrl if configured, otherwise uses sestraBaseUrl
    */
   async request<T = unknown>(
     endpoint: string,
@@ -237,7 +240,7 @@ export class SestraClient {
       throw new Error('Session expired or no calls remaining.');
     }
 
-    const response = await this.fetch<T>(endpoint, {
+    const response = await this.fetchService<T>(endpoint, {
       ...options,
       headers: {
         ...options.headers,
@@ -261,12 +264,36 @@ export class SestraClient {
   // Internal
   // ============================================
 
-  private async fetch<T>(
+  /**
+   * Fetch from Sestra API (payments, sessions)
+   */
+  private async fetchSestra<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
-    const url = `${this.config.baseUrl}${endpoint}`;
+    const url = `${this.sestraBaseUrl}${endpoint}`;
+    return this.doFetch<T>(url, options);
+  }
 
+  /**
+   * Fetch from Provider's service API (protected endpoints)
+   */
+  private async fetchService<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<ApiResponse<T>> {
+    const baseUrl = this.serviceBaseUrl || this.sestraBaseUrl;
+    const url = `${baseUrl}${endpoint}`;
+    return this.doFetch<T>(url, options);
+  }
+
+  /**
+   * Internal fetch helper
+   */
+  private async doFetch<T>(
+    url: string,
+    options: RequestInit = {}
+  ): Promise<ApiResponse<T>> {
     try {
       const response = await fetch(url, {
         ...options,
