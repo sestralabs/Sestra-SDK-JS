@@ -5,6 +5,25 @@
 export { SestraClient } from './client.js';
 export { SestraWallet } from './wallet.js';
 
+// Error Classes
+export {
+  SestraError,
+  PaymentCreationError,
+  PaymentVerificationError,
+  PaymentNotFoundError,
+  SessionError,
+  NoSessionError,
+  SessionExpiredError,
+  ApiError,
+  NetworkError,
+  SandboxModeError,
+  WalletTransactionError,
+  ValidationError,
+  isSestraError,
+  ErrorCodes,
+} from './errors.js';
+export type { ErrorCode } from './errors.js';
+
 // Types
 export type {
   // Config
