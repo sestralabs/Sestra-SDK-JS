@@ -1,6 +1,23 @@
 # @sestra/sdk
 
-Sestra SDK for JavaScript/TypeScript - Solana Payment Gateway for APIs
+[![npm version](https://img.shields.io/npm/v/@sestra/sdk.svg)](https://www.npmjs.com/package/@sestra/sdk)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-16+-green.svg)](https://nodejs.org/)
+[![CI](https://github.com/sestralabs/Sestra-SDK-JS/actions/workflows/ci.yml/badge.svg)](https://github.com/sestralabs/Sestra-SDK-JS/actions/workflows/ci.yml)
+
+**Sestra SDK** - The official JavaScript/TypeScript SDK for the Sestra Payment Gateway. Enable pay-per-request API monetization using Solana blockchain payments.
+
+## Features
+
+- 🚀 **Simple Integration** - Get started in minutes with intuitive APIs
+- 💰 **Solana Payments** - Accept SOL payments with automatic verification
+- 🧪 **Sandbox Mode** - Test without real transactions
+- 🔐 **Session Management** - Automatic session handling and token refresh
+- 📊 **Merchant API** - Manage policies, view transactions, track earnings
+- 🌐 **Browser & Node.js** - Works in any JavaScript environment
+- 📝 **TypeScript** - Full type definitions included
+- ⚡ **Wallet Integration** - Compatible with Phantom, Solflare, and more
 
 ## Installation
 
@@ -239,6 +256,19 @@ interface VerifyPaymentResponse {
 type PaymentStatus = 'pending' | 'active' | 'expired' | 'revoked' | 'cancelled';
 ```
 
+## Documentation
+
+- [API Reference](./API.md) - Complete API documentation
+- [Examples](./examples/) - Code examples for common use cases
+- [Contributing](./CONTRIBUTING.md) - How to contribute
+- [Changelog](./CHANGELOG.md) - Version history
+
+## Support
+
+- 📖 [Documentation](https://docs.sestralabs.xyz)
+- 💬 [Discord](https://discord.gg/sestralabs)
+- 🐛 [Issues](https://github.com/sestralabs/Sestra-SDK-JS/issues)
+
 ## License
 
-MIT
+MIT License - see [LICENSE](./LICENSE) for details.
