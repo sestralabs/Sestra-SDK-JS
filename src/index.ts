@@ -32,8 +32,11 @@ export type {
   // Payment Types
   PaymentStatus,
   PaymentDetails,
+  SandboxPaymentDetails,
   CreatePaymentRequest,
   CreatePaymentResponse,
+  SandboxCreatePaymentResponse,
+  VerifyPaymentRequest,
   VerifyPaymentResponse,
   PaymentStatusResponse,
   CancelPaymentResponse,
@@ -42,9 +45,21 @@ export type {
   // Sandbox Types
   SimulatePaymentRequest,
   SimulatePaymentResponse,
+  SandboxPaymentStatusResponse,
+  SandboxCancelPaymentResponse,
   
   // Session Types
   Session,
+  SessionActivateRequest,
+  SessionActivateResponse,
+  
+  // Merchant API Types
+  Policy,
+  CreatePolicyRequest,
+  MerchantUser,
+  MerchantStats,
+  Transaction,
+  Earnings,
   
   // Wallet Types
   PaymentParams,

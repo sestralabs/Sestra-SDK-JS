@@ -7,13 +7,11 @@ import {
   PublicKey,
   Transaction,
   SystemProgram,
-  TransactionInstruction,
   Keypair,
   sendAndConfirmTransaction,
 } from '@solana/web3.js';
-import type { PaymentParams, PaymentResult, PaymentDetails } from './types.js';
-
-const MEMO_PROGRAM_ID = new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr');
+import { createMemoInstruction } from '@solana/spl-memo';
+import type { PaymentParams, PaymentResult, PaymentDetails, SandboxPaymentDetails } from './types.js';
 
 export class SestraWallet {
   private connection: Connection;
@@ -66,13 +64,9 @@ export class SestraWallet {
       })
     );
 
-    // Add memo instruction with reference_id
+    // Add memo instruction with reference_id (using @solana/spl-memo)
     transaction.add(
-      new TransactionInstruction({
-        keys: [{ pubkey: payerPublicKey, isSigner: true, isWritable: true }],
-        programId: MEMO_PROGRAM_ID,
-        data: Buffer.from(memo, 'utf-8'),
-      })
+      createMemoInstruction(memo, [payerPublicKey])
     );
 
     // Get recent blockhash

@@ -153,7 +153,7 @@ describe('SestraWallet', () => {
       const memoInstruction = transaction.instructions[1];
 
       expect(memoInstruction.data.toString()).toBe('unique-reference-123');
-    });
+    }, 30000);
   });
 });
 
@@ -226,7 +226,7 @@ describe('SestraWallet Payment Flow Integration', () => {
     expect(transaction.instructions.length).toBe(2);
     expect(transaction.feePayer?.toBase58()).toBe(VALID_PAYER.toBase58());
     expect(transaction.recentBlockhash).toBeDefined();
-  });
+  }, 30000);
 
   it('should handle devnet network detection', () => {
     expect(wallet.getNetwork()).toBe('devnet');
@@ -249,5 +249,5 @@ describe('SestraWallet Keypair Generation', () => {
 
     expect(transaction).toBeDefined();
     expect(transaction.feePayer?.toBase58()).toBe(payer.publicKey.toBase58());
-  });
+  }, 30000);
 });

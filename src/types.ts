@@ -20,8 +20,21 @@ export interface SestraConfig {
    */
   baseUrl?: string;
   
+  /**
+   * Solana RPC endpoint
+   * @default 'https://api.mainnet-beta.solana.com'
+   */
   solanaRpcEndpoint?: string;
+  
+  /**
+   * Enable sandbox mode for testing
+   */
   sandbox?: boolean;
+  
+  /**
+   * API Key for Merchant API access
+   */
+  apiKey?: string;
 }
 
 // ============================================
@@ -44,7 +57,17 @@ export interface PaymentDetails {
   // Smart contract info
   program_id: string;
   use_smart_contract: boolean;
-  is_sandbox?: boolean;
+}
+
+export interface SandboxPaymentDetails {
+  blockchain: 'solana';
+  network: 'devnet';
+  recipient_address: string;
+  amount_lamports: number;
+  amount_sol: number;
+  memo: string;
+  expires_in_seconds: number;
+  is_sandbox: boolean;
 }
 
 export interface CreatePaymentRequest {
@@ -56,10 +79,18 @@ export interface CreatePaymentResponse {
   success: boolean;
   reference_id: string;
   status: PaymentStatus;
-  is_sandbox?: boolean;
   payment_details: PaymentDetails;
   activation_endpoint: string;
-  note?: string;
+}
+
+export interface SandboxCreatePaymentResponse {
+  success: boolean;
+  reference_id: string;
+  status: PaymentStatus;
+  is_sandbox: boolean;
+  payment_details: SandboxPaymentDetails;
+  activation_endpoint: string;
+  note: string;
 }
 
 export interface VerifyPaymentRequest {
@@ -115,6 +146,27 @@ export interface SimulatePaymentResponse {
   message: string;
 }
 
+export interface SandboxPaymentStatusResponse {
+  reference_id: string;
+  status: PaymentStatus;
+  is_sandbox: boolean;
+  amount_lamports: number;
+  amount_sol: number;
+  created_at: string;
+  expires_at: string;
+  activated_at?: string;
+  calls_used?: number;
+  calls_remaining?: number;
+}
+
+export interface SandboxCancelPaymentResponse {
+  success: boolean;
+  reference_id: string;
+  status: PaymentStatus;
+  is_sandbox: boolean;
+  message: string;
+}
+
 // ============================================
 // Session Types (for protected API access)
 // ============================================
@@ -155,4 +207,88 @@ export interface ListPaymentsOptions {
   status?: PaymentStatus;
   limit?: number;
   offset?: number;
+}
+
+// ============================================
+// Session Activation Types
+// ============================================
+
+export interface SessionActivateRequest {
+  reference_id: string;
+  tx_hash: string;
+}
+
+export interface SessionActivateResponse {
+  id: string;
+  token: string;
+  status: string;
+  policy_id: string;
+  reference_id: string;
+  calls_used: number;
+  calls_remaining: number;
+  created_at: string;
+  expires_at: string;
+  activated_at?: string;
+}
+
+// ============================================
+// Merchant API Types (requires API Key)
+// ============================================
+
+export interface Policy {
+  id: string;
+  name: string;
+  endpoint_pattern: string;
+  ttl_seconds: number;
+  max_calls: number;
+  required_amount_lamports: number;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CreatePolicyRequest {
+  name: string;
+  endpoint_pattern: string;
+  ttl_seconds: number;
+  max_calls: number;
+  required_amount_lamports: number;
+}
+
+export interface MerchantUser {
+  id: string;
+  email: string;
+  wallet_address?: string;
+  created_at: string;
+}
+
+export interface MerchantStats {
+  total_payments: number;
+  active_sessions: number;
+  total_revenue_lamports: number;
+  total_revenue_sol: number;
+}
+
+export interface Transaction {
+  id: string;
+  reference_id: string;
+  type: 'PAYMENT' | 'REFUND';
+  amount_lamports: number;
+  amount_sol: number;
+  status: string;
+  tx_hash?: string;
+  created_at: string;
+}
+
+export interface Earnings {
+  period_days: number;
+  total_lamports: number;
+  total_sol: number;
+  transaction_count: number;
+  daily_breakdown?: Array<{
+    date: string;
+    amount_lamports: number;
+    amount_sol: number;
+    count: number;
+  }>;
 }

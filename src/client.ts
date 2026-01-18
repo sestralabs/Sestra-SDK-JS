@@ -7,13 +7,23 @@ import type {
   Session,
   CreatePaymentRequest,
   CreatePaymentResponse,
+  SandboxCreatePaymentResponse,
   VerifyPaymentResponse,
   PaymentStatusResponse,
   CancelPaymentResponse,
   SimulatePaymentRequest,
   SimulatePaymentResponse,
+  SandboxPaymentStatusResponse,
+  SandboxCancelPaymentResponse,
   ListPaymentsOptions,
   ApiResponse,
+  SessionActivateResponse,
+  Policy,
+  CreatePolicyRequest,
+  MerchantUser,
+  MerchantStats,
+  Transaction,
+  Earnings,
 } from './types.js';
 
 const DEFAULT_SESTRA_URL = 'https://api.sestralabs.xyz';
@@ -24,12 +34,14 @@ export class SestraClient {
   private sandbox: boolean;
   private sessionToken?: string;
   private currentSession?: Session;
+  private apiKey?: string;
 
   constructor(config: Partial<SestraConfig> = {}) {
     // Support both old baseUrl and new sestraBaseUrl
     this.sestraBaseUrl = config.sestraBaseUrl || config.baseUrl || DEFAULT_SESTRA_URL;
     this.serviceBaseUrl = config.serviceBaseUrl;
     this.sandbox = config.sandbox ?? false;
+    this.apiKey = config.apiKey;
   }
 
   // ============================================
@@ -76,12 +88,12 @@ export class SestraClient {
    * Create a new payment request
    * Returns payment details including Solana address, amount, and memo
    */
-  async createPayment(params: CreatePaymentRequest): Promise<CreatePaymentResponse> {
+  async createPayment(params: CreatePaymentRequest): Promise<CreatePaymentResponse | SandboxCreatePaymentResponse> {
     const endpoint = this.sandbox 
       ? '/api/v1/sandbox/payments' 
       : '/api/v1/payments';
 
-    const response = await this.fetchSestra<CreatePaymentResponse>(endpoint, {
+    const response = await this.fetchSestra<CreatePaymentResponse | SandboxCreatePaymentResponse>(endpoint, {
       method: 'POST',
       body: JSON.stringify(params),
     });
@@ -96,12 +108,12 @@ export class SestraClient {
   /**
    * Check payment status by reference ID
    */
-  async getPaymentStatus(referenceId: string): Promise<PaymentStatusResponse> {
+  async getPaymentStatus(referenceId: string): Promise<PaymentStatusResponse | SandboxPaymentStatusResponse> {
     const endpoint = this.sandbox
       ? `/api/v1/sandbox/payments/${referenceId}`
       : `/api/v1/payments/${referenceId}`;
 
-    const response = await this.fetchSestra<PaymentStatusResponse>(endpoint);
+    const response = await this.fetchSestra<PaymentStatusResponse | SandboxPaymentStatusResponse>(endpoint);
 
     if (!response.data) {
       throw new Error(response.error || 'Payment not found');
@@ -145,12 +157,12 @@ export class SestraClient {
   /**
    * Cancel a pending payment
    */
-  async cancelPayment(referenceId: string): Promise<CancelPaymentResponse> {
+  async cancelPayment(referenceId: string): Promise<CancelPaymentResponse | SandboxCancelPaymentResponse> {
     const endpoint = this.sandbox
       ? `/api/v1/sandbox/payments/${referenceId}/cancel`
       : `/api/v1/payments/${referenceId}/cancel`;
 
-    const response = await this.fetchSestra<CancelPaymentResponse>(endpoint, {
+    const response = await this.fetchSestra<CancelPaymentResponse | SandboxCancelPaymentResponse>(endpoint, {
       method: 'POST',
     });
 
@@ -164,7 +176,7 @@ export class SestraClient {
   /**
    * List payments with optional filters
    */
-  async listPayments(options: ListPaymentsOptions = {}): Promise<PaymentStatusResponse[]> {
+  async listPayments(options: ListPaymentsOptions = {}): Promise<PaymentStatusResponse[] | SandboxPaymentStatusResponse[]> {
     const params = new URLSearchParams();
     if (options.status) params.set('status', options.status);
     if (options.limit) params.set('limit', options.limit.toString());
@@ -174,7 +186,7 @@ export class SestraClient {
       ? `/api/v1/sandbox/payments?${params}`
       : `/api/v1/payments?${params}`;
 
-    const response = await this.fetchSestra<PaymentStatusResponse[]>(endpoint);
+    const response = await this.fetchSestra<PaymentStatusResponse[] | SandboxPaymentStatusResponse[]>(endpoint);
 
     return response.data || [];
   }
@@ -215,6 +227,145 @@ export class SestraClient {
         expires_at: response.data.expires_at || '',
         calls_remaining: response.data.calls_remaining || 0,
       });
+    }
+
+    return response.data;
+  }
+
+  // ============================================
+  // Session Activation (Alternative to verifyPayment)
+  // ============================================
+
+  /**
+   * Activate a session using reference_id and tx_hash
+   * This is an alternative endpoint to verifyPayment
+   */
+  async activateSession(referenceId: string, txHash: string): Promise<SessionActivateResponse> {
+    const response = await this.fetchSestra<SessionActivateResponse>(
+      '/api/v1/sessions/activate',
+      {
+        method: 'POST',
+        body: JSON.stringify({ reference_id: referenceId, tx_hash: txHash }),
+      }
+    );
+
+    if (!response.data) {
+      throw new Error(response.error || 'Session activation failed');
+    }
+
+    // Auto-set session
+    this.setSession({
+      token: response.data.token,
+      reference_id: response.data.reference_id,
+      expires_at: response.data.expires_at,
+      calls_remaining: response.data.calls_remaining,
+    });
+
+    return response.data;
+  }
+
+  // ============================================
+  // Merchant API (requires API Key)
+  // ============================================
+
+  /**
+   * Get current merchant user info
+   * Requires API Key
+   */
+  async getMerchantUser(): Promise<MerchantUser> {
+    const response = await this.fetchSestraWithApiKey<MerchantUser>('/api/v1/public/me');
+
+    if (!response.data) {
+      throw new Error(response.error || 'Failed to get user info');
+    }
+
+    return response.data;
+  }
+
+  /**
+   * Get merchant stats
+   * Requires API Key
+   */
+  async getMerchantStats(): Promise<MerchantStats> {
+    const response = await this.fetchSestraWithApiKey<MerchantStats>('/api/v1/public/stats');
+
+    if (!response.data) {
+      throw new Error(response.error || 'Failed to get stats');
+    }
+
+    return response.data;
+  }
+
+  /**
+   * List merchant policies
+   * Requires API Key
+   */
+  async listPolicies(): Promise<Policy[]> {
+    const response = await this.fetchSestraWithApiKey<Policy[]>('/api/v1/public/policies');
+
+    return response.data || [];
+  }
+
+  /**
+   * Create a new policy
+   * Requires API Key
+   */
+  async createPolicy(params: CreatePolicyRequest): Promise<Policy> {
+    const response = await this.fetchSestraWithApiKey<Policy>('/api/v1/public/policies', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+
+    if (!response.data) {
+      throw new Error(response.error || 'Failed to create policy');
+    }
+
+    return response.data;
+  }
+
+  /**
+   * Delete a policy
+   * Requires API Key
+   */
+  async deletePolicy(policyId: string): Promise<void> {
+    const response = await this.fetchSestraWithApiKey<{ message: string }>(
+      `/api/v1/public/policies/${policyId}`,
+      { method: 'DELETE' }
+    );
+
+    if (response.error) {
+      throw new Error(response.error);
+    }
+  }
+
+  /**
+   * Get merchant transactions
+   * Requires API Key
+   */
+  async getTransactions(options: { limit?: number; offset?: number; type?: 'PAYMENT' | 'REFUND' } = {}): Promise<Transaction[]> {
+    const params = new URLSearchParams();
+    if (options.limit) params.set('limit', options.limit.toString());
+    if (options.offset) params.set('offset', options.offset.toString());
+    if (options.type) params.set('type', options.type);
+
+    const response = await this.fetchSestraWithApiKey<Transaction[]>(
+      `/api/v1/public/transactions?${params}`
+    );
+
+    return response.data || [];
+  }
+
+  /**
+   * Get merchant earnings
+   * Requires API Key
+   */
+  async getEarnings(days: number = 7): Promise<Earnings> {
+    const response = await this.fetchSestraWithApiKey<Earnings>(
+      `/api/v1/public/earnings?days=${days}`
+    );
+
+    if (!response.data) {
+      throw new Error(response.error || 'Failed to get earnings');
     }
 
     return response.data;
@@ -273,6 +424,27 @@ export class SestraClient {
   ): Promise<ApiResponse<T>> {
     const url = `${this.sestraBaseUrl}${endpoint}`;
     return this.doFetch<T>(url, options);
+  }
+
+  /**
+   * Fetch from Sestra API with API Key authentication (Merchant API)
+   */
+  private async fetchSestraWithApiKey<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<ApiResponse<T>> {
+    if (!this.apiKey) {
+      throw new Error('API Key is required for Merchant API. Set apiKey in config.');
+    }
+
+    const url = `${this.sestraBaseUrl}${endpoint}`;
+    return this.doFetch<T>(url, {
+      ...options,
+      headers: {
+        ...options.headers,
+        'X-API-Key': this.apiKey,
+      },
+    });
   }
 
   /**
